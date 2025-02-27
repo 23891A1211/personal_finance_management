@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InvestTracker - Login</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2a4365;
+            --secondary-color: #4299e1;
+            --accent-color: #48bb78;
+            --background-color: #f7fafc;
+            --text-color: #2d3748;
+            --error-color: #f56565;
+            --success-color: #48bb78;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --gradient-1: linear-gradient(135deg, #667eea, #764ba2);
+            --gradient-2: linear-gradient(135deg, #6B46C1, #2C5282);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: 
+                radial-gradient(circle at top left, rgba(102, 126, 234, 0.5), transparent 50%),
+                radial-gradient(circle at bottom right, rgba(118, 75, 162, 0.5), transparent 50%),
+                var(--gradient-1);
+            padding: 2rem;
+            perspective: 1000px;
+            overflow-x: hidden;
+        }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: float-particle 15s infinite linear;
+            filter: blur(1px);
+        }
+
+        @keyframes float-particle {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 0;
+            }
+            50% {
+                opacity: 0.8;
+            }
+            100% {
+                transform: translateY(-100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            max-width: 450px;
+            min-height: 500px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            box-shadow: 
+                0 25px 45px rgba(0, 0, 0, 0.2),
+                inset 0 0 20px rgba(255, 255, 255, 0.2);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            z-index: 1;
+            transform-style: preserve-3d;
+            padding: 2rem;
+            animation: container-appear 1s ease-out;
+        }
+
+        @keyframes container-appear {
+            from {
+                opacity: 0;
+                transform: translateY(20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .login-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            width: 100%;
+        }
+
+        .form {
+            width: 100%;
+            max-width: 320px;
+            padding: 1rem 0;
+        }
+
+        .title {
+            text-align: center;
+            color: var(--primary-color);
+            margin-bottom: 2rem;
+            font-size: 2rem;
+        }
+
+        .form-group {
+            position: relative;
+            margin-bottom: 2rem;
+            width: 100%;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 15px 40px 15px 15px;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-group label {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1rem;
+            color: #666;
+            pointer-events: none;
+            transition: all 0.3s ease;
+        }
+
+        .form-group input:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 5px 15px rgba(66, 153, 225, 0.2);
+        }
+
+        .form-group input:focus + label,
+        .form-group input:valid + label {
+            transform: translateY(-130%) scale(0.8);
+            color: var(--secondary-color);
+            font-weight: bold;
+        }
+
+        .form-group .icon {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .form-group .icon:hover {
+            color: var(--secondary-color);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: var(--gradient-2);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn .spinner {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+        }
+
+        .btn.loading {
+            color: transparent;
+        }
+
+        .btn.loading .spinner {
+            display: block;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .social-container {
+            margin-top: 2rem;
+            position: relative;
+        }
+
+        .social-container::before,
+        .social-container::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 40%;
+            height: 1px;
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        .social-container::before {
+            left: 0;
+        }
+
+        .social-container::after {
+            right: 0;
+        }
+
+        .social-text {
+            text-align: center;
+            color: var(--text-color);
+            margin-bottom: 1rem;
+            position: relative;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 0 1rem;
+            display: inline-block;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .social-media {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .social-icon {
+            width: 45px;
+            height: 45px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: white;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .social-icon::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+        }
+
+        .social-icon:hover::before {
+            transform: translateY(0);
+        }
+
+        .error-message {
+            position: absolute;
+            bottom: -20px;
+            left: 0;
+            color: var(--error-color);
+            font-size: 0.8rem;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+        }
+
+        .form-group.error .error-message {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .form-group.error input {
+            border-color: var(--error-color);
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        .success-checkmark {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 1rem;
+            border-radius: 50%;
+            background: var(--success-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: scale(0);
+            transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            position: relative;
+        }
+
+        .success-checkmark::before {
+            content: '✓';
+            color: white;
+            font-size: 2rem;
+        }
+
+        .success .success-checkmark {
+            transform: scale(1);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 1rem;
+                padding: 1.5rem;
+                min-height: auto;
+            }
+
+            body {
+                padding: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="particles"></div>
+
+    <div class="container">
+        <div class="login-container">
+            <form class="form" id="loginForm">
+                <h2 class="title">Welcome Back</h2>
+                <div class="form-group">
+                    <input type="email" required id="email">
+                    <label>Email</label>
+                    <i class="icon fas fa-envelope"></i>
+                    <div class="error-message">Please enter a valid email address</div>
+                </div>
+                <div class="form-group">
+                    <input type="password" required id="password">
+                    <label>Password</label>
+                    <i class="icon fas fa-eye-slash toggle-password"></i>
+                    <div class="error-message">Password must be at least 6 characters</div>
+                </div>
+                <button type="submit" class="btn">
+                    Sign In
+                    <i class="spinner fas fa-circle-notch"></i>
+                </button>
+                <div class="social-container">
+                    <p class="social-text">Or Sign in with</p>
+                    <div class="social-media">
+                        <a href="#" class="social-icon google">
+                            <i class="fab fa-google"></i>
+                        </a>
+                        <a href="#" class="social-icon facebook">
+                            <i class="fab fa-facebook-f"></i>
+                        </a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const loginForm = document.querySelector('#loginForm');
+        const togglePassword = document.querySelector('.toggle-password');
+        const passwordInput = document.querySelector('#password');
+
+        // Toggle password visibility
+        togglePassword.addEventListener('click', () => {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            togglePassword.classList.toggle('fa-eye');
+            togglePassword.classList.toggle('fa-eye-slash');
+        });
+
+        // Enhanced form validation
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = loginForm.querySelector('#email');
+            const password = loginForm.querySelector('#password');
+            const button = loginForm.querySelector('.btn');
+            let isValid = true;
+
+            // Reset previous errors
+            document.querySelectorAll('.form-group').forEach(group => {
+                group.classList.remove('error');
+            });
+
+            // Validate email
+            if (!validateEmail(email.value)) {
+                showError(email);
+                isValid = false;
+            }
+
+            // Validate password
+            if (password.value.length < 6) {
+                showError(password);
+                isValid = false;
+            }
+
+            if (!isValid) return;
+
+            // Show loading state
+            button.classList.add('loading');
+            
+            try {
+                // Simulate API call
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                showSuccess(loginForm);
+                setTimeout(() => {
+                    window.location.href = 'invest.html';
+                }, 1000);
+            } catch (error) {
+                showError(email, 'Login failed. Please try again.');
+            } finally {
+                button.classList.remove('loading');
+            }
+        });
+
+        function validateEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        function showError(input, message) {
+            const formGroup = input.closest('.form-group');
+            formGroup.classList.add('error');
+            if (message) {
+                formGroup.querySelector('.error-message').textContent = message;
+            }
+        }
+
+        function showSuccess(form) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success-checkmark';
+            form.insertBefore(successDiv, form.firstChild);
+            form.classList.add('success');
+        }
+
+        // Enhanced particle effect
+        function createParticles() {
+            const particlesContainer = document.querySelector('.particles');
+            const particleCount = 50;
+
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                
+                const size = Math.random() * 5 + 2;
+                const left = Math.random() * 100;
+                const delay = Math.random() * 15;
+                const duration = Math.random() * 15 + 10;
+                const blur = Math.random() * 2;
+
+                particle.style.width = `${size}px`;
+                particle.style.height = `${size}px`;
+                particle.style.left = `${left}%`;
+                particle.style.animationDelay = `${delay}s`;
+                particle.style.animationDuration = `${duration}s`;
+                particle.style.filter = `blur(${blur}px)`;
+
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        createParticles();
+
+        // Add floating animation to form inputs
+        document.querySelectorAll('.form-group input').forEach(input => {
+            const label = input.nextElementSibling;
+            
+            input.addEventListener('focus', () => {
+                label.style.transform = 'translateY(-130%) scale(0.8)';
+                label.style.color = 'var(--secondary-color)';
+            });
+
+            input.addEventListener('blur', () => {
+                if (!input.value) {
+                    label.style.transform = 'translateY(-50%)';
+                    label.style.color = '#666';
+                }
+            });
+
+            // Initialize if input has value
+            if (input.value) {
+                label.style.transform = 'translateY(-130%) scale(0.8)';
+                label.style.color = 'var(--secondary-color)';
+            }
+        });
+    </script>
+</body>
+</html> 

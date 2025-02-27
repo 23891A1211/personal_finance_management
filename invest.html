@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Investment Tracker Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/luxon@2.0.2/build/global/luxon.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.0.0"></script>
+    <style>
+        :root {
+            --primary-color: #2a4365;
+            --secondary-color: #4299e1;
+            --accent-color: #48bb78;
+            --background-color: #f7fafc;
+            --text-color: #2d3748;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --glass-effect: backdrop-filter: blur(10px);
+            --success-gradient: linear-gradient(135deg, #48bb78, #38a169);
+            --danger-gradient: linear-gradient(135deg, #f56565, #c53030);
+            --primary-gradient: linear-gradient(135deg, #2a4365, #4299e1);
+            --card-gradient: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(255,255,255,0.85));
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f6f8fa, #e2e8f0);
+            min-height: 100vh;
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            color: var(--text-color);
+            overflow-x: hidden;
+        }
+
+        /* Header Styles */
+        .header {
+            background: var(--primary-gradient);
+            padding: 1.5rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .nav {
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .nav-links a:hover {
+            opacity: 0.8;
+        }
+
+        /* Main Content Styles */
+        .container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 2rem;
+        }
+
+        .portfolio-overview {
+            grid-column: span 8;
+        }
+
+        .portfolio-stats {
+            grid-column: span 4;
+        }
+
+        .asset-allocation {
+            grid-column: span 6;
+        }
+
+        .performance-metrics {
+            grid-column: span 6;
+        }
+
+        .card {
+            background: var(--card-gradient);
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: var(--primary-gradient);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .card:hover::before {
+            opacity: 1;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            color: var(--primary-color);
+        }
+
+        /* Portfolio Chart */
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 1rem 0;
+        }
+
+        /* Real-time ticker */
+        .ticker-container {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 0.5rem;
+            overflow: hidden;
+            white-space: nowrap;
+            position: relative;
+        }
+
+        .ticker-content {
+            display: inline-block;
+            animation: ticker 30s linear infinite;
+        }
+
+        .ticker-item {
+            display: inline-block;
+            margin: 0 2rem;
+        }
+
+        @keyframes ticker {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+
+        /* Market indicators */
+        .market-indicators {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .indicator {
+            padding: 1rem;
+            border-radius: 10px;
+            text-align: center;
+            background: rgba(255,255,255,0.9);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .indicator-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-top: 0.5rem;
+        }
+
+        /* Risk Assessment Form */
+        .risk-assessment {
+            grid-column: span 12;
+            background: var(--card-gradient);
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--primary-color);
+            font-weight: 500;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.9);
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.2);
+            outline: none;
+        }
+
+        /* Risk score visualization */
+        .risk-score {
+            width: 200px;
+            height: 200px;
+            margin: 2rem auto;
+            position: relative;
+        }
+
+        .risk-score-circle {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: conic-gradient(
+                var(--accent-color) var(--percentage),
+                #e2e8f0 var(--percentage)
+            );
+            transition: all 0.3s ease;
+        }
+
+        .risk-score-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        /* Loading animation */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255,255,255,0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .loading-overlay.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--secondary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .portfolio-overview,
+            .portfolio-stats,
+            .asset-allocation,
+            .performance-metrics {
+                grid-column: span 12;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 1rem;
+            }
+
+            .market-indicators {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <header class="header">
+        <nav class="nav">
+            <div class="nav-logo">InvestTracker</div>
+            <div class="nav-links">
+                <a href="portfolio.html">Portfolio</a>
+                <a href="#risk">Risk Assessment</a>
+                <a href="#education">Education</a>
+                <a href="#account">Account</a>
+            </div>
+        </nav>
+    </header>
+
+    <div class="ticker-container">
+        <div class="ticker-content" id="market-ticker">
+            <!-- Market data will be populated here -->
+        </div>
+    </div>
+
+    <main class="container">
+        <div class="portfolio-overview card">
+            <h2>Portfolio Overview</h2>
+            <div class="market-indicators">
+                <div class="indicator">
+                    <span>Portfolio Value</span>
+                    <div class="indicator-value" id="portfolio-value">Rs.125,430</div>
+                </div>
+                <div class="indicator">
+                    <span>Day Change</span>
+                    <div class="indicator-value positive" id="day-change">+2.3%</div>
+                </div>
+                <div class="indicator">
+                    <span>Total Return</span>
+                    <div class="indicator-value positive" id="total-return">+15.8%</div>
+                </div>
+            </div>
+            <div class="chart-container" id="portfolio-chart"></div>
+        </div>
+
+        <div class="portfolio-stats card">
+            <h2>Quick Stats</h2>
+            <div class="stats-list">
+                <div class="stat-item">
+                    <span>Volatility</span>
+                    <div class="stat-value" id="volatility">12.5%</div>
+                </div>
+                <div class="stat-item">
+                    <span>Sharpe Ratio</span>
+                    <div class="stat-value" id="sharpe-ratio">1.8</div>
+                </div>
+                <div class="stat-item">
+                    <span>Beta</span>
+                    <div class="stat-value" id="beta">0.85</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="asset-allocation card">
+            <h2>Asset Allocation</h2>
+            <div class="chart-container" id="allocation-chart"></div>
+        </div>
+
+        <div class="performance-metrics card">
+            <h2>Performance</h2>
+            <div class="chart-container" id="performance-chart"></div>
+        </div>
+
+        <div class="risk-assessment card">
+            <h2>Risk Assessment</h2>
+            <div class="risk-score">
+                <div class="risk-score-circle"></div>
+                <div class="risk-score-value">0%</div>
+            </div>
+            <form id="risk-form">
+                <div class="form-group">
+                    <label for="investment-goal">Investment Goal</label>
+                    <select id="investment-goal" class="form-control" required>
+                        <option value="">Select your goal</option>
+                        <option value="retirement">Retirement</option>
+                        <option value="wealth">Wealth Building</option>
+                        <option value="income">Regular Income</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="time-horizon">Investment Time Horizon (years)</label>
+                    <input type="number" id="time-horizon" class="form-control" min="1" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="risk-tolerance">Risk Tolerance</label>
+                    <select id="risk-tolerance" class="form-control" required>
+                        <option value="">Select risk level</option>
+                        <option value="conservative">Conservative</option>
+                        <option value="moderate">Moderate</option>
+                        <option value="aggressive">Aggressive</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn">Get Investment Strategy</button>
+            </form>
+        </div>
+    </main>
+
+    <script>
+        // Initialize loading state
+        function showLoading() {
+            document.querySelector('.loading-overlay').classList.add('active');
+        }
+
+        function hideLoading() {
+            document.querySelector('.loading-overlay').classList.remove('active');
+        }
+
+        // Market ticker simulation
+        function initializeMarketTicker() {
+            const tickers = [
+                { symbol: 'AAPL', price: 150.25, change: +1.2 },
+                { symbol: 'GOOGL', price: 2800.50, change: -0.8 },
+                { symbol: 'MSFT', price: 290.75, change: +2.1 },
+                { symbol: 'AMZN', price: 3400.20, change: +0.5 },
+                { symbol: 'TSLA', price: 750.80, change: -1.5 }
+            ];
+
+            const tickerContent = document.getElementById('market-ticker');
+            tickerContent.innerHTML = tickers.map(ticker => `
+                <span class="ticker-item">
+                    ${ticker.symbol}: Rs.${ticker.price.toFixed(2)}
+                    <span class="${ticker.change >= 0 ? 'positive' : 'negative'}">
+                        ${ticker.change >= 0 ? '+' : ''}${ticker.change}%
+                    </span>
+                </span>
+            `).join('');
+        }
+
+        // Enhanced portfolio chart
+        function initializePortfolioChart() {
+            const ctx = document.getElementById('portfolio-chart').getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            gradient.addColorStop(0, 'rgba(66, 153, 225, 0.2)');
+            gradient.addColorStop(1, 'rgba(66, 153, 225, 0.0)');
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: generateTimeLabels(30),
+                    datasets: [{
+                        label: 'Portfolio Value',
+                        data: generatePortfolioValues(30, 125430),
+                        borderColor: '#4299e1',
+                        backgroundColor: gradient,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#4299e1',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            padding: 12,
+                            titleFont: {
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                size: 13
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    return `Value: Rs.${context.parsed.y.toLocaleString()}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            grid: {
+                                drawBorder: false,
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return 'Rs.' + value.toLocaleString();
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Real-time market simulation
+        function startMarketSimulation() {
+            setInterval(() => {
+                updatePortfolioValue();
+                updateMarketIndicators();
+            }, 5000);
+        }
+
+        function updatePortfolioValue() {
+            const value = document.getElementById('portfolio-value');
+            const currentValue = parseFloat(value.textContent.replace(/[Rs.,]/g, ''));
+            const change = (Math.random() - 0.5) * 1000;
+            const newValue = Math.max(currentValue + change, 100000);
+            value.textContent = `Rs.${newValue.toLocaleString()}`;
+
+            const dayChange = document.getElementById('day-change');
+            const changePercent = (change / currentValue * 100).toFixed(2);
+            dayChange.textContent = `${changePercent >= 0 ? '+' : ''}${changePercent}%`;
+            dayChange.className = `indicator-value ${changePercent >= 0 ? 'positive' : 'negative'}`;
+        }
+
+        function updateMarketIndicators() {
+            const volatility = document.getElementById('volatility');
+            const sharpeRatio = document.getElementById('sharpe-ratio');
+            const beta = document.getElementById('beta');
+
+            volatility.textContent = `${(Math.random() * 5 + 10).toFixed(1)}%`;
+            sharpeRatio.textContent = (Math.random() * 0.5 + 1.5).toFixed(2);
+            beta.textContent = (Math.random() * 0.3 + 0.7).toFixed(2);
+        }
+
+        // Enhanced risk assessment
+        function initializeRiskAssessment() {
+            const form = document.getElementById('risk-form');
+            const inputs = form.querySelectorAll('input, select');
+
+            inputs.forEach(input => {
+                input.addEventListener('change', () => {
+                    const score = calculateRiskScore();
+                    updateRiskVisual(score);
+                });
+            });
+        }
+
+        function calculateRiskScore() {
+            const goal = document.getElementById('investment-goal').value;
+            const timeHorizon = parseInt(document.getElementById('time-horizon').value) || 0;
+            const riskTolerance = document.getElementById('risk-tolerance').value;
+
+            let score = 0;
+            
+            if (goal === 'retirement') score += 30;
+            else if (goal === 'wealth') score += 40;
+            else if (goal === 'income') score += 20;
+
+            if (timeHorizon > 10) score += 40;
+            else if (timeHorizon > 5) score += 30;
+            else if (timeHorizon > 2) score += 20;
+            else score += 10;
+
+            if (riskTolerance === 'aggressive') score += 30;
+            else if (riskTolerance === 'moderate') score += 20;
+            else if (riskTolerance === 'conservative') score += 10;
+
+            return Math.min(score, 100);
+        }
+
+        function updateRiskVisual(score) {
+            const circle = document.querySelector('.risk-score-circle');
+            const value = document.querySelector('.risk-score-value');
+            
+            circle.style.setProperty('--percentage', `${score}%`);
+            value.textContent = `${score}%`;
+
+            // Update color based on score
+            let color;
+            if (score < 30) color = '#f56565';
+            else if (score < 70) color = '#ed8936';
+            else color = '#48bb78';
+
+            circle.style.background = `conic-gradient(${color} ${score}%, #e2e8f0 ${score}%)`;
+        }
+
+        // Initialize everything
+        async function initialize() {
+            showLoading();
+            try {
+                await Promise.all([
+                    initializeMarketTicker(),
+                    initializePortfolioChart(),
+                    initializeRiskAssessment()
+                ]);
+                startMarketSimulation();
+            } catch (error) {
+                console.error('Initialization error:', error);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // Start the application
+        document.addEventListener('DOMContentLoaded', initialize);
+    </script>
+</body>
+</html>

@@ -1149,15 +1149,22 @@
     </div>
 
     <script>
-        // Sample data
+        // Initial Data Setup
         let transactions = [
             { id: 1, type: 'income', amount: 3500, category: 'salary', date: '2025-02-15', description: 'Monthly Salary' },
             { id: 2, type: 'expense', amount: 150, category: 'grocery', date: '2025-02-20', description: 'Grocery Shopping' },
             { id: 3, type: 'expense', amount: 85, category: 'utilities', date: '2025-02-22', description: 'Electric Bill' },
             { id: 4, type: 'expense', amount: 65, category: 'dining', date: '2025-02-24', description: 'Dinner with Friends' }
         ];
-       
-        // Financial data for the user
+
+        let budgetCategories = [
+            { id: 1, name: 'Housing', budget: 2000, spent: 1800, color: '#4299e1' },
+            { id: 2, name: 'Transportation', budget: 500, spent: 350, color: '#48bb78' },
+            { id: 3, name: 'Food', budget: 800, spent: 600, color: '#ed8936' },
+            { id: 4, name: 'Utilities', budget: 400, spent: 380, color: '#9f7aea' },
+            { id: 5, name: 'Entertainment', budget: 300, spent: 120, color: '#ed64a6' }
+        ];
+
         let userData = {
             income: 3500,
             expenses: 960,
@@ -1181,256 +1188,465 @@
                 healthcare: 0,
                 education: 30,
                 other: 40
-            },
-            previousMonth: {
-                grocery: 350,
-                utilities: 270,
-                entertainment: 180,
-                dining: 130,
-                transportation: 110,
-                healthcare: 50,
-                education: 30,
-                other: 80
             }
         };
-       
-        // DOM elements
+
+        // DOM Elements
         const transactionForm = document.getElementById('transaction-form');
         const transactionList = document.getElementById('transaction-list');
         const totalBalance = document.getElementById('total-balance');
         const totalIncome = document.getElementById('total-income');
         const totalExpenses = document.getElementById('total-expenses');
         const adviceContainer = document.getElementById('advice-container');
-       
-        // Initialize the app
-        async function init() {
+        const budgetModal = document.getElementById('budgetModal');
+        const budgetCategoriesContainer = document.getElementById('budgetCategories');
+
+        // Initialize Application
+        async function initialize() {
             showLoading();
             try {
-                await Promise.all([
-                    initializeCharts(),
-                    loadUserData(),
-                    setupEventListeners()
-                ]);
-                updateUI();
+                // Load saved data first
+                loadFromLocalStorage();
+
+                // Initialize core data
+                calculateTotals();
+                updateTotalDisplay();
+                
+                // Setup event listeners first
+                setupEventListeners();
+
+                // Initialize UI components one by one with error handling
+                await initializeUIComponents();
+
+                // Start real-time updates
+                startPerformanceUpdates();
             } catch (error) {
-                console.error('Error initializing app:', error);
-                showError('Failed to initialize the application. Please refresh the page.');
+                console.error('Initialization error:', error);
+                // Show a more helpful error message
+                const errorMessage = document.createElement('div');
+                errorMessage.style.cssText = 'position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: #f44336; color: white; padding: 15px; border-radius: 5px; z-index: 9999;';
+                errorMessage.textContent = 'There was an error loading the application. Please try refreshing the page.';
+                document.body.appendChild(errorMessage);
+                setTimeout(() => errorMessage.remove(), 5000);
             } finally {
                 hideLoading();
             }
         }
-       
-        function showLoading() {
-            document.querySelector('.loading-overlay').classList.add('active');
+
+        // Separate function to initialize UI components
+        async function initializeUIComponents() {
+            const tasks = [];
+
+            // Initialize charts if their containers exist
+            if (document.getElementById('spending-chart')) {
+                tasks.push(initializeSpendingChart().catch(err => console.warn('Spending chart initialization failed:', err)));
+            }
+            if (document.getElementById('trends-chart')) {
+                tasks.push(initializeTrendsChart().catch(err => console.warn('Trends chart initialization failed:', err)));
+            }
+            if (document.getElementById('budgetOverviewChart')) {
+                tasks.push(initializeBudgetChart().catch(err => console.warn('Budget chart initialization failed:', err)));
+            }
+
+            // Add other UI updates
+            tasks.push(
+                renderTransactions().catch(err => console.warn('Transaction rendering failed:', err)),
+                renderBudgetCategories().catch(err => console.warn('Budget categories rendering failed:', err)),
+                updateBudgetSummary().catch(err => console.warn('Budget summary update failed:', err)),
+                generateAdvice().catch(err => console.warn('Advice generation failed:', err))
+            );
+
+            // Wait for all tasks to complete, but don't fail if some fail
+            await Promise.allSettled(tasks);
         }
-       
-        function hideLoading() {
-            document.querySelector('.loading-overlay').classList.remove('active');
-        }
-       
-        function showError(message) {
-            // Implement error notification
-            alert(message);
-        }
-       
-        async function loadUserData() {
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            // ... existing userData loading ...
-        }
-       
-        function initializeCharts() {
-            // Initialize all charts with advanced configurations
-            initializeTrendsChart();
-            initializeSpendingChart();
-            // ... other chart initializations ...
-        }
-       
-        function initializeTrendsChart() {
-            const ctx = document.getElementById('trends-chart').getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: generateDateLabels(),
-                    datasets: [{
-                        label: 'Income',
-                        data: generateRandomData(),
-                        borderColor: '#2ecc71',
-                        fill: false,
-                        tension: 0.4
-                    }, {
-                        label: 'Expenses',
-                        data: generateRandomData(),
-                        borderColor: '#e74c3c',
-                        fill: false,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                drawBorder: false,
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            },
-                            ticks: {
-                                callback: value => 'Rs.' + value.toLocaleString()
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
-                            }
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'top'
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return context.dataset.label + ': Rs.' + context.parsed.y.toLocaleString();
-                                }
-                            }
-                        }
-                    }
+
+        // Make renderTransactions return a Promise
+        function renderTransactions() {
+            return new Promise((resolve) => {
+                const transactionList = document.getElementById('transaction-list');
+                if (!transactionList) {
+                    resolve();
+                    return;
                 }
+
+                transactionList.innerHTML = transactions
+                    .sort((a, b) => new Date(b.date) - new Date(a.date))
+                    .map(transaction => `
+                        <div class="transaction-item">
+                            <div class="transaction-details">
+                                <h4>${transaction.description}</h4>
+                                <span class="transaction-date">${new Date(transaction.date).toLocaleDateString()}</span>
+                                <div>
+                                    <span class="category-tag">${transaction.category}</span>
+                                </div>
+                            </div>
+                            <div class="amount ${transaction.type}">
+                                ${transaction.type === 'income' ? '+' : '-'}Rs.${transaction.amount.toLocaleString()}
+                            </div>
+                        </div>
+                    `).join('');
+                resolve();
             });
         }
-       
-        function generateDateLabels() {
-            const dates = [];
-            const today = luxon.DateTime.now();
-            for (let i = 30; i >= 0; i--) {
-                dates.push(today.minus({ days: i }).toFormat('LLL dd'));
+
+        // Make renderBudgetCategories return a Promise
+        function renderBudgetCategories() {
+            return new Promise((resolve) => {
+                if (!budgetCategoriesContainer) {
+                    resolve();
+                    return;
+                }
+
+                budgetCategoriesContainer.innerHTML = budgetCategories.map(category => {
+                    const percentage = (category.spent / category.budget) * 100;
+                    return `
+                        <div class="budget-category">
+                            <div class="category-header">
+                                <h3>${category.name}</h3>
+                                <span style="color: ${category.color}">
+                                    Rs.${category.spent.toLocaleString()} / Rs.${category.budget.toLocaleString()}
+                                </span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${percentage}%; background: ${category.color}"></div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
+                                <span>${percentage.toFixed(1)}% used</span>
+                                <span>Rs.${(category.budget - category.spent).toLocaleString()} remaining</span>
+                            </div>
+                            <div class="budget-actions">
+                                <button onclick="editBudget(${category.id})" class="budget-btn budget-btn-secondary">
+                                    Edit Budget
+                                </button>
+                                <button onclick="addExpense(${category.id})" class="budget-btn budget-btn-secondary">
+                                    Add Expense
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                resolve();
+            });
+        }
+
+        // Make updateBudgetSummary return a Promise
+        function updateBudgetSummary() {
+            return new Promise((resolve) => {
+                const totalBudget = budgetCategories.reduce((sum, cat) => sum + cat.budget, 0);
+                const totalSpent = budgetCategories.reduce((sum, cat) => sum + cat.spent, 0);
+                const remaining = totalBudget - totalSpent;
+
+                const elements = {
+                    totalBudget: document.getElementById('totalBudget'),
+                    totalSpent: document.getElementById('totalSpent'),
+                    totalRemaining: document.getElementById('totalRemaining')
+                };
+
+                if (elements.totalBudget) elements.totalBudget.textContent = `Rs.${totalBudget.toLocaleString()}`;
+                if (elements.totalSpent) elements.totalSpent.textContent = `Rs.${totalSpent.toLocaleString()}`;
+                if (elements.totalRemaining) elements.totalRemaining.textContent = `Rs.${remaining.toLocaleString()}`;
+                resolve();
+            });
+        }
+
+        // Make generateAdvice return a Promise
+        function generateAdvice() {
+            return new Promise((resolve) => {
+                if (!adviceContainer) {
+                    resolve();
+                    return;
+                }
+
+                const advice = [];
+                
+                budgetCategories.forEach(category => {
+                    const percentage = (category.spent / category.budget) * 100;
+                    if (percentage > 90) {
+                        advice.push(`
+                            <div class="advice-card">
+                                <h4>Budget Alert</h4>
+                                <p>You've used ${percentage.toFixed(1)}% of your ${category.name} budget. Consider reducing expenses in this category.</p>
+                            </div>
+                        `);
+                    }
+                });
+
+                const savingsRate = ((userData.income - userData.expenses) / userData.income) * 100;
+                if (savingsRate < 20) {
+                    advice.push(`
+                        <div class="advice-card">
+                            <h4>Saving Opportunity</h4>
+                            <p>Your current savings rate is ${savingsRate.toFixed(1)}%. Try to save at least 20% of your income.</p>
+                        </div>
+                    `);
+                }
+
+                adviceContainer.innerHTML = advice.join('');
+                resolve();
+            });
+        }
+
+        // Event Listeners Setup
+        function setupEventListeners() {
+            const form = document.getElementById('transaction-form');
+            if (form) {
+                form.addEventListener('submit', handleTransactionSubmit);
             }
-            return dates;
+
+            const trendPeriod = document.getElementById('trend-period');
+            if (trendPeriod) {
+                trendPeriod.addEventListener('change', updateTrends);
+            }
+
+            // Budget planner event listeners
+            const categoryForm = document.getElementById('categoryForm');
+            if (categoryForm) {
+                categoryForm.addEventListener('submit', addBudgetCategory);
+            }
+
+            // Goals event listeners
+            const goalForm = document.getElementById('goalForm');
+            if (goalForm) {
+                goalForm.addEventListener('submit', addFinancialGoal);
+            }
         }
-       
-        function generateRandomData() {
-            return Array.from({ length: 31 }, () => Math.floor(Math.random() * 1000) + 500);
+
+        // Transaction Handling
+        function handleTransactionSubmit(event) {
+            event.preventDefault();
+            
+            const formData = {
+                type: document.getElementById('transaction-type').value,
+                amount: parseFloat(document.getElementById('transaction-amount').value),
+                category: document.getElementById('transaction-category').value,
+                description: document.getElementById('transaction-description').value,
+                date: document.getElementById('transaction-date').value || new Date().toISOString().split('T')[0]
+            };
+
+            if (!formData.amount || isNaN(formData.amount)) {
+                showError('Please enter a valid amount');
+                return;
+            }
+
+            const newTransaction = {
+                id: transactions.length + 1,
+                ...formData
+            };
+
+            addTransaction(newTransaction);
+            event.target.reset();
+            
+            // Show success message
+            const successMessage = document.createElement('div');
+            successMessage.className = 'alert alert-success';
+            successMessage.textContent = 'Transaction added successfully!';
+            event.target.insertBefore(successMessage, event.target.firstChild);
+            
+            // Remove success message after 3 seconds
+            setTimeout(() => successMessage.remove(), 3000);
         }
-       
-        function showExportOptions() {
-            // Implement export functionality
-            const format = confirm('Choose export format:\nOK for CSV, Cancel for PDF');
-            if (format) {
-                exportToCSV();
+
+        function addTransaction(transaction) {
+            transactions.push(transaction);
+
+            // Update user data
+            if (transaction.type === 'income') {
+                userData.income += transaction.amount;
             } else {
-                exportToPDF();
+                userData.expenses += transaction.amount;
+                updateCategorySpending(transaction.category, transaction.amount);
+            }
+
+            userData.balance = userData.income - userData.expenses;
+
+            // Update UI
+            updateUI();
+            
+            // Save to localStorage
+            saveToLocalStorage();
+        }
+
+        function updateCategorySpending(category, amount) {
+            // Update user data spending
+            if (userData.spending[category] !== undefined) {
+                userData.spending[category] += amount;
+            } else {
+                userData.spending[category] = amount;
+            }
+
+            // Update budget categories
+            const budgetCategory = budgetCategories.find(cat => 
+                cat.name.toLowerCase() === category.toLowerCase());
+            if (budgetCategory) {
+                budgetCategory.spent += amount;
             }
         }
-       
-        function exportToCSV() {
-            // Implement CSV export
-            const data = prepareExportData();
-            const csv = convertToCSV(data);
-            downloadFile(csv, 'financial_report.csv', 'text/csv');
-        }
-       
-        function prepareExportData() {
-            // Prepare data for export
-            return transactions.map(t => ({
-                date: t.date,
-                type: t.type,
-                amount: t.amount,
-                category: t.category,
-                description: t.description
-            }));
-        }
-       
-        function convertToCSV(data) {
-            const headers = Object.keys(data[0]);
-            const rows = data.map(obj => headers.map(header => obj[header]));
-            return [headers, ...rows].map(row => row.join(',')).join('\n');
-        }
-       
-        function downloadFile(content, fileName, contentType) {
-            const blob = new Blob([content], { type: contentType });
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = fileName;
-            link.click();
-            window.URL.revokeObjectURL(url);
-        }
-       
-        // ... rest of existing functions ...
 
-        // Initialize the app
-        document.addEventListener('DOMContentLoaded', init);
+        // Save and Load Data
+        function saveToLocalStorage() {
+            const data = {
+                transactions,
+                userData,
+                budgetCategories
+            };
+            localStorage.setItem('financeTrackerData', JSON.stringify(data));
+        }
 
-        // Budget Planner Functionality
-        let budgetCategories = [
-            { id: 1, name: 'Housing', budget: 2000, spent: 1800, color: '#4299e1' },
-            { id: 2, name: 'Transportation', budget: 500, spent: 350, color: '#48bb78' },
-            { id: 3, name: 'Food', budget: 800, spent: 600, color: '#ed8936' },
-            { id: 4, name: 'Utilities', budget: 400, spent: 380, color: '#9f7aea' },
-            { id: 5, name: 'Entertainment', budget: 300, spent: 120, color: '#ed64a6' }
-        ];
+        function loadFromLocalStorage() {
+            const savedData = localStorage.getItem('financeTrackerData');
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                transactions = data.transactions;
+                userData = data.userData;
+                budgetCategories = data.budgetCategories;
+            }
+        }
 
-        function showBudgetPlanner() {
-            document.getElementById('budgetModal').style.display = 'flex';
+        // Update UI
+        function updateUI() {
+            calculateTotals();
+            updateTotalDisplay();
+            renderTransactions();
             renderBudgetCategories();
             updateBudgetSummary();
-            initializeBudgetChart();
+            generateAdvice();
+            
+            // Update charts
+            initializeCharts();
+        }
+
+        function updateTotalDisplay() {
+            if (totalBalance) totalBalance.textContent = `Rs.${userData.balance.toLocaleString()}`;
+            if (totalIncome) totalIncome.textContent = `Rs.${userData.income.toLocaleString()}`;
+            if (totalExpenses) totalExpenses.textContent = `Rs.${userData.expenses.toLocaleString()}`;
+        }
+
+        function calculateTotals() {
+            userData.income = transactions
+                .filter(t => t.type === 'income')
+                .reduce((sum, t) => sum + t.amount, 0);
+
+            userData.expenses = transactions
+                .filter(t => t.type === 'expense')
+                .reduce((sum, t) => sum + t.amount, 0);
+
+            userData.balance = userData.income - userData.expenses;
+        }
+
+        // Utility Functions
+        function showLoading() {
+            const overlay = document.querySelector('.loading-overlay');
+            if (overlay) overlay.classList.add('active');
+        }
+
+        function hideLoading() {
+            const overlay = document.querySelector('.loading-overlay');
+            if (overlay) overlay.classList.remove('active');
+        }
+
+        function showError(message) {
+            alert(message);
+        }
+
+        // Budget Management
+        function showBudgetPlanner() {
+            if (budgetModal) {
+                budgetModal.style.display = 'flex';
+                renderBudgetCategories();
+                updateBudgetSummary();
+                initializeBudgetChart();
+            }
         }
 
         function closeBudgetPlanner() {
-            document.getElementById('budgetModal').style.display = 'none';
+            if (budgetModal) {
+                budgetModal.style.display = 'none';
+            }
         }
 
-        function renderBudgetCategories() {
-            const container = document.getElementById('budgetCategories');
-            container.innerHTML = budgetCategories.map(category => {
-                const percentage = (category.spent / category.budget) * 100;
-                const isOverBudget = percentage > 100;
-                
-                return `
-                    <div class="budget-category ${isOverBudget ? 'over-budget' : ''}">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <h3>${category.name}</h3>
-                            <span style="color: ${category.color}">
-                                Rs.${category.spent.toLocaleString()} / Rs.${category.budget.toLocaleString()}
-                            </span>
-                        </div>
-                        <div class="budget-progress">
-                            <div class="progress-bar" style="width: ${Math.min(percentage, 100)}%; background: ${category.color}"></div>
-                        </div>
-                        <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
-                            <span>${percentage.toFixed(1)}% used</span>
-                            <span>Rs.${(category.budget - category.spent).toLocaleString()} remaining</span>
-                        </div>
-                        <div class="budget-actions">
-                            <button class="budget-btn budget-btn-secondary" onclick="editCategory(${category.id})">
-                                Edit
-                            </button>
-                            <button class="budget-btn budget-btn-secondary" onclick="addExpense(${category.id})">
-                                Add Expense
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+        function addBudgetCategory(event) {
+            event.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('categoryName').value,
+                budget: parseFloat(document.getElementById('budgetAmount').value),
+                color: document.getElementById('categoryColor').value
+            };
+
+            if (!formData.budget || isNaN(formData.budget)) {
+                showError('Please enter a valid budget amount');
+                return;
+            }
+
+            const newCategory = {
+                id: budgetCategories.length + 1,
+                name: formData.name,
+                budget: formData.budget,
+                spent: 0,
+                color: formData.color || '#' + Math.floor(Math.random()*16777215).toString(16)
+            };
+
+            budgetCategories.push(newCategory);
+            userData.budget[newCategory.name.toLowerCase()] = newCategory.budget;
+            userData.spending[newCategory.name.toLowerCase()] = 0;
+
+            updateUI();
+            saveToLocalStorage();
+            event.target.reset();
+
+            // Show success message
+            const successMessage = document.createElement('div');
+            successMessage.className = 'alert alert-success';
+            successMessage.textContent = 'Budget category added successfully!';
+            event.target.insertBefore(successMessage, event.target.firstChild);
+            
+            // Remove success message after 3 seconds
+            setTimeout(() => successMessage.remove(), 3000);
         }
 
-        function updateBudgetSummary() {
-            const totalBudget = budgetCategories.reduce((sum, cat) => sum + cat.budget, 0);
-            const totalSpent = budgetCategories.reduce((sum, cat) => sum + cat.spent, 0);
-            const remaining = totalBudget - totalSpent;
+        function editBudget(categoryId) {
+            const category = budgetCategories.find(cat => cat.id === categoryId);
+            if (!category) return;
 
-            document.getElementById('totalBudget').textContent = `Rs.${totalBudget.toLocaleString()}`;
-            document.getElementById('totalSpent').textContent = `Rs.${totalSpent.toLocaleString()}`;
-            document.getElementById('totalRemaining').textContent = `Rs.${remaining.toLocaleString()}`;
+            const newBudget = prompt(`Enter new budget for ${category.name}:`, category.budget);
+            if (newBudget === null || isNaN(newBudget)) return;
+
+            category.budget = parseFloat(newBudget);
+            userData.budget[category.name.toLowerCase()] = category.budget;
+            
+            updateUI();
+            saveToLocalStorage();
+        }
+
+        function addExpense(categoryId) {
+            const category = budgetCategories.find(cat => cat.id === categoryId);
+            if (!category) return;
+
+            const expense = prompt(`Enter expense amount for ${category.name}:`, 0);
+            if (expense === null || isNaN(expense)) return;
+
+            const amount = parseFloat(expense);
+            if (amount <= 0) {
+                showError('Please enter a valid expense amount');
+                return;
+            }
+            
+            const newTransaction = {
+                id: transactions.length + 1,
+                type: 'expense',
+                amount: amount,
+                category: category.name.toLowerCase(),
+                description: `${category.name} Expense`,
+                date: new Date().toISOString().split('T')[0]
+            };
+
+            addTransaction(newTransaction);
         }
 
         function initializeBudgetChart() {
-            const ctx = document.getElementById('budgetOverviewChart').getContext('2d');
-            
+            const ctx = document.getElementById('budgetOverviewChart');
+            if (!ctx) return;
+
             if (window.budgetChart) {
                 window.budgetChart.destroy();
             }
@@ -1459,17 +1675,8 @@
                     scales: {
                         y: {
                             beginAtZero: true,
-                            grid: {
-                                drawBorder: false,
-                                color: 'rgba(0, 0, 0, 0.05)'
-                            },
                             ticks: {
                                 callback: value => 'Rs.' + value.toLocaleString()
-                            }
-                        },
-                        x: {
-                            grid: {
-                                display: false
                             }
                         }
                     },
@@ -1489,386 +1696,189 @@
             });
         }
 
-        function addBudgetCategory(event) {
-            event.preventDefault();
-            const form = event.target;
-            const newCategory = {
-                id: budgetCategories.length + 1,
-                name: form.categoryName.value,
-                budget: parseFloat(form.budgetAmount.value),
-                spent: 0,
-                color: form.categoryColor.value
-            };
+        // Initialize spending chart
+        function initializeSpendingChart() {
+            return new Promise((resolve, reject) => {
+                try {
+                    const ctx = document.getElementById('spending-chart');
+                    if (!ctx) {
+                        resolve();
+                        return;
+                    }
 
-            budgetCategories.push(newCategory);
-            renderBudgetCategories();
-            updateBudgetSummary();
-            initializeBudgetChart();
-            form.reset();
-        }
+                    const categories = Object.keys(userData.spending);
+                    const spendingData = categories.map(cat => userData.spending[cat]);
+                    const budgetData = categories.map(cat => userData.budget[cat]);
 
-        function editCategory(categoryId) {
-            const category = budgetCategories.find(cat => cat.id === categoryId);
-            if (!category) return;
-
-            const newBudget = prompt(`Enter new budget for ${category.name}:`, category.budget);
-            if (newBudget === null) return;
-
-            category.budget = parseFloat(newBudget);
-            renderBudgetCategories();
-            updateBudgetSummary();
-            initializeBudgetChart();
-        }
-
-        function addExpense(categoryId) {
-            const category = budgetCategories.find(cat => cat.id === categoryId);
-            if (!category) return;
-
-            const expense = prompt(`Enter expense amount for ${category.name}:`, 0);
-            if (expense === null) return;
-
-            category.spent += parseFloat(expense);
-            renderBudgetCategories();
-            updateBudgetSummary();
-            initializeBudgetChart();
-        }
-
-        // Add this to your existing initialize function
-        async function initialize() {
-            showLoading();
-            try {
-                await Promise.all([
-                    initializeMarketTicker(),
-                    initializePortfolioChart(),
-                    initializeRiskAssessment(),
-                    // Initialize goals
-                    renderFinancialGoals(),
-                    updateGoalsSummary(),
-                    generateRecommendations()
-                ]);
-                startMarketSimulation();
-            } catch (error) {
-                console.error('Initialization error:', error);
-            } finally {
-                hideLoading();
-            }
-        }
-
-        // Financial Goals Functionality
-        let financialGoals = [
-            {
-                id: 1,
-                name: "Emergency Fund",
-                targetAmount: 10000,
-                currentAmount: 7500,
-                deadline: "2024-12-31",
-                type: "savings",
-                priority: "high",
-                monthlyContribution: 500,
-                milestones: [2500, 5000, 7500, 10000],
-                startDate: "2024-01-01"
-            },
-            {
-                id: 2,
-                name: "Down Payment",
-                targetAmount: 30000,
-                currentAmount: 5000,
-                deadline: "2025-06-30",
-                type: "savings",
-                priority: "medium",
-                monthlyContribution: 1000,
-                milestones: [7500, 15000, 22500, 30000],
-                startDate: "2024-01-01"
-            },
-            {
-                id: 3,
-                name: "Retirement Fund",
-                targetAmount: 10000,
-                currentAmount: 0,
-                deadline: "2024-12-31",
-                type: "investment",
-                priority: "low",
-                monthlyContribution: 300,
-                milestones: [2500, 5000, 7500, 10000],
-                startDate: "2024-01-01"
-            }
-        ];
-
-        function showGoals() {
-            document.getElementById('goalsModal').style.display = 'flex';
-            renderFinancialGoals();
-            updateGoalsSummary();
-            initializeGoalsChart();
-            generateRecommendations();
-        }
-
-        function closeGoals() {
-            document.getElementById('goalsModal').style.display = 'none';
-        }
-
-        function renderFinancialGoals() {
-            const container = document.getElementById('financialGoals');
-            container.innerHTML = financialGoals.map(goal => {
-                const progress = (goal.currentAmount / goal.targetAmount) * 100;
-                const remainingDays = Math.ceil((new Date(goal.deadline) - new Date()) / (1000 * 60 * 60 * 24));
-                const monthlyNeeded = ((goal.targetAmount - goal.currentAmount) / remainingDays) * 30;
-                
-                return `
-                    <div class="goal-card">
-                        <span class="priority-badge priority-${goal.priority}">${goal.priority}</span>
-                        <h3>${goal.name}</h3>
-                        <p>${goal.type.charAt(0).toUpperCase() + goal.type.slice(1)}</p>
-                        
-                        <div class="goal-progress">
-                            <div class="goal-progress-bar">
-                                <div class="progress-fill" style="width: ${progress}%"></div>
-                                ${goal.milestones.map((milestone, index) => {
-                                    const milestoneProgress = (milestone / goal.targetAmount) * 100;
-                                    const reached = goal.currentAmount >= milestone;
-                                    return `
-                                        <div class="milestone ${reached ? 'reached' : ''}" 
-                                             style="left: ${milestoneProgress}%"
-                                             title="Rs.${milestone.toLocaleString()} Milestone">
-                                        </div>
-                                    `;
-                                }).join('')}
-                            </div>
-                            <div class="goal-milestones">
-                                <span>Rs.0</span>
-                                <span>Rs.${goal.targetAmount.toLocaleString()}</span>
-                            </div>
-                        </div>
-
-                        <div class="goal-stats">
-                            <div class="goal-stat">
-                                <small>Progress</small>
-                                <h4>${progress.toFixed(1)}%</h4>
-                            </div>
-                            <div class="goal-stat">
-                                <small>Current Amount</small>
-                                <h4>Rs.${goal.currentAmount.toLocaleString()}</h4>
-                            </div>
-                            <div class="goal-stat">
-                                <small>Monthly Contribution</small>
-                                <h4>Rs.${goal.monthlyContribution.toLocaleString()}</h4>
-                            </div>
-                            <div class="goal-stat">
-                                <small>Days Remaining</small>
-                                <h4>${remainingDays}</h4>
-                            </div>
-                        </div>
-
-                        <div class="goal-actions">
-                            <button class="goal-btn budget-btn-secondary" onclick="editGoal(${goal.id})">
-                                Edit
-                            </button>
-                            <button class="goal-btn budget-btn-secondary" onclick="addContribution(${goal.id})">
-                                Add Contribution
-                            </button>
-                            <button class="goal-btn budget-btn-secondary" onclick="viewProjection(${goal.id})">
-                                View Projection
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        }
-
-        function updateGoalsSummary() {
-            const activeGoals = financialGoals.length;
-            const completedGoals = financialGoals.filter(goal => goal.currentAmount >= goal.targetAmount).length;
-            const totalSaved = financialGoals.reduce((sum, goal) => sum + goal.currentAmount, 0);
-            const totalTarget = financialGoals.reduce((sum, goal) => sum + goal.targetAmount, 0);
-
-            document.getElementById('activeGoals').textContent = activeGoals;
-            document.getElementById('completedGoals').textContent = completedGoals;
-            document.getElementById('totalSaved').textContent = `Rs.${totalSaved.toLocaleString()}`;
-            document.getElementById('targetAmount').textContent = `Rs.${totalTarget.toLocaleString()}`;
-        }
-
-        function initializeGoalsChart() {
-            const ctx = document.getElementById('goalsOverviewChart').getContext('2d');
-            
-            if (window.goalsChart) {
-                window.goalsChart.destroy();
-            }
-
-            window.goalsChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: financialGoals.map(goal => goal.name),
-                    datasets: [{
-                        label: 'Current Amount',
-                        data: financialGoals.map(goal => goal.currentAmount),
-                        backgroundColor: 'rgba(46, 204, 113, 0.6)',
-                        borderColor: 'rgba(46, 204, 113, 1)',
-                        borderWidth: 1
-                    }, {
-                        label: 'Target Amount',
-                        data: financialGoals.map(goal => goal.targetAmount),
-                        backgroundColor: 'rgba(52, 152, 219, 0.6)',
-                        borderColor: 'rgba(52, 152, 219, 1)',
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                drawBorder: false,
-                                color: 'rgba(0, 0, 0, 0.05)'
+                    new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: categories.map(cat => cat.charAt(0).toUpperCase() + cat.slice(1)),
+                            datasets: [{
+                                label: 'Spent',
+                                data: spendingData,
+                                backgroundColor: 'rgba(231, 76, 60, 0.7)',
+                                borderColor: '#e74c3c',
+                                borderWidth: 1
+                            }, {
+                                label: 'Budget',
+                                data: budgetData,
+                                backgroundColor: 'rgba(46, 204, 113, 0.7)',
+                                borderColor: '#2ecc71',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: value => 'Rs.' + value.toLocaleString()
+                                    }
+                                }
                             },
-                            ticks: {
-                                callback: value => 'Rs.' + value.toLocaleString()
-                            }
-                        }
-                    },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return context.dataset.label + ': Rs.' + context.parsed.y.toLocaleString();
+                            plugins: {
+                                legend: {
+                                    position: 'top'
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return context.dataset.label + ': Rs.' + context.parsed.y.toLocaleString();
+                                        }
+                                    }
                                 }
                             }
                         }
-                    }
+                    });
+                    resolve();
+                } catch (error) {
+                    console.warn('Spending chart initialization failed:', error);
+                    resolve(); // Resolve anyway to not block other components
                 }
             });
         }
 
-        function addFinancialGoal(event) {
-            event.preventDefault();
-            const form = event.target;
-            const newGoal = {
-                id: financialGoals.length + 1,
-                name: form.goalName.value,
-                targetAmount: parseFloat(form.goalTargetAmount.value),
-                currentAmount: 0,
-                deadline: form.goalDeadline.value,
-                type: form.goalType.value,
-                priority: form.priority.value,
-                monthlyContribution: parseFloat(form.monthlyContribution.value),
-                milestones: [],
-                startDate: new Date().toISOString().split('T')[0]
+        // Initialize trends chart
+        function initializeTrendsChart() {
+            return new Promise((resolve, reject) => {
+                try {
+                    const ctx = document.getElementById('trends-chart');
+                    if (!ctx) {
+                        resolve();
+                        return;
+                    }
+
+                    const dates = Array.from({length: 30}, (_, i) => {
+                        const date = new Date();
+                        date.setDate(date.getDate() - (29 - i));
+                        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    });
+
+                    const incomeData = Array.from({length: 30}, () => Math.floor(Math.random() * 1000) + 3000);
+                    const expenseData = Array.from({length: 30}, () => Math.floor(Math.random() * 800) + 200);
+
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: dates,
+                            datasets: [{
+                                label: 'Income',
+                                data: incomeData,
+                                borderColor: '#2ecc71',
+                                backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            }, {
+                                label: 'Expenses',
+                                data: expenseData,
+                                borderColor: '#e74c3c',
+                                backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                                tension: 0.4,
+                                fill: true
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'top'
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                        callback: value => 'Rs.' + value.toLocaleString()
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    resolve();
+                } catch (error) {
+                    console.warn('Trends chart initialization failed:', error);
+                    resolve(); // Resolve anyway to not block other components
+                }
+            });
+        }
+
+        // Start performance updates
+        function startPerformanceUpdates() {
+            setInterval(() => {
+                updatePerformanceMetrics();
+            }, 5000);
+        }
+
+        // Update performance metrics
+        function updatePerformanceMetrics() {
+            const elements = {
+                monthlyGrowth: document.getElementById('monthly-growth'),
+                savingsRate: document.getElementById('savings-rate'),
+                netWorth: document.getElementById('net-worth')
             };
 
-            // Calculate milestones (4 equal steps)
-            const milestoneStep = newGoal.targetAmount / 4;
-            newGoal.milestones = [
-                milestoneStep,
-                milestoneStep * 2,
-                milestoneStep * 3,
-                newGoal.targetAmount
-            ];
+            if (elements.monthlyGrowth) {
+                const growth = ((Math.random() * 5) - 1).toFixed(1);
+                elements.monthlyGrowth.textContent = `${growth}%`;
+                elements.monthlyGrowth.style.color = parseFloat(growth) >= 0 ? '#2ecc71' : '#e74c3c';
+            }
 
-            financialGoals.push(newGoal);
-            renderFinancialGoals();
-            updateGoalsSummary();
-            initializeGoalsChart();
-            generateRecommendations();
-            form.reset();
+            if (elements.savingsRate) {
+                const rate = ((userData.income - userData.expenses) / userData.income * 100).toFixed(1);
+                elements.savingsRate.textContent = `${rate}%`;
+            }
+
+            if (elements.netWorth) {
+                const worth = userData.balance + (Math.random() - 0.5) * 100;
+                elements.netWorth.textContent = `Rs.${Math.round(worth).toLocaleString()}`;
+            }
         }
 
-        function editGoal(goalId) {
-            const goal = financialGoals.find(g => g.id === goalId);
-            if (!goal) return;
-
-            const newAmount = prompt(`Update target amount for ${goal.name}:`, goal.targetAmount);
-            if (newAmount === null) return;
-
-            goal.targetAmount = parseFloat(newAmount);
-            const milestoneStep = goal.targetAmount / 4;
-            goal.milestones = [
-                milestoneStep,
-                milestoneStep * 2,
-                milestoneStep * 3,
-                goal.targetAmount
-            ];
-
-            renderFinancialGoals();
-            updateGoalsSummary();
-            initializeGoalsChart();
-            generateRecommendations();
-        }
-
-        function addContribution(goalId) {
-            const goal = financialGoals.find(g => g.id === goalId);
-            if (!goal) return;
-
-            const contribution = prompt(`Enter contribution amount for ${goal.name}:`, goal.monthlyContribution);
-            if (contribution === null) return;
-
-            goal.currentAmount += parseFloat(contribution);
-            renderFinancialGoals();
-            updateGoalsSummary();
-            initializeGoalsChart();
-            generateRecommendations();
-        }
-
-        function viewProjection(goalId) {
-            const goal = financialGoals.find(g => g.id === goalId);
-            if (!goal) return;
-
-            const remainingAmount = goal.targetAmount - goal.currentAmount;
-            const remainingMonths = Math.ceil((new Date(goal.deadline) - new Date()) / (1000 * 60 * 60 * 24 * 30));
-            const projectedMonthlyNeed = remainingAmount / remainingMonths;
-
-            alert(
-                `Goal Projection for ${goal.name}\n\n` +
-                `Current Progress: Rs.${goal.currentAmount.toLocaleString()} / Rs.${goal.targetAmount.toLocaleString()}\n` +
-                `Remaining Amount: Rs.${remainingAmount.toLocaleString()}\n` +
-                `Months to Deadline: ${remainingMonths}\n` +
-                `Required Monthly Contribution: Rs.${projectedMonthlyNeed.toFixed(2).toLocaleString()}\n\n` +
-                `Current Monthly Contribution: Rs.${goal.monthlyContribution.toLocaleString()}\n` +
-                `${projectedMonthlyNeed > goal.monthlyContribution ? 
-                    `Warning: You need to increase your monthly contribution by Rs.${(projectedMonthlyNeed - goal.monthlyContribution).toFixed(2).toLocaleString()} to reach your goal on time.` :
-                    `You're on track to reach your goal ahead of schedule!`}`
-            );
-        }
-
-        function generateRecommendations() {
-            const container = document.getElementById('goalRecommendations');
-            const recommendations = [];
-
-            financialGoals.forEach(goal => {
-                const progress = (goal.currentAmount / goal.targetAmount) * 100;
-                const remainingDays = Math.ceil((new Date(goal.deadline) - new Date()) / (1000 * 60 * 60 * 24));
-                const monthlyNeeded = ((goal.targetAmount - goal.currentAmount) / remainingDays) * 30;
-
-                if (monthlyNeeded > goal.monthlyContribution) {
-                    recommendations.push({
-                        type: 'warning',
-                        message: `Increase monthly contribution for "${goal.name}" by Rs.${(monthlyNeeded - goal.monthlyContribution).toFixed(2).toLocaleString()} to reach your goal on time.`
-                    });
-                }
-
-                if (progress < 25 && remainingDays < 180) {
-                    recommendations.push({
-                        type: 'alert',
-                        message: `"${goal.name}" is significantly behind schedule. Consider adjusting your target date or increasing contributions.`
-                    });
-                }
-
-                if (progress >= 90) {
-                    recommendations.push({
-                        type: 'success',
-                        message: `You're very close to achieving "${goal.name}"! Consider setting up your next financial goal.`
-                    });
-                }
+        // Initialize all charts
+        function initializeCharts() {
+            return Promise.all([
+                initializeSpendingChart(),
+                initializeTrendsChart(),
+                initializeBudgetChart()
+            ]).catch(error => {
+                console.warn('Chart initialization error:', error);
             });
-
-            container.innerHTML = `
-                <h3>Smart Recommendations</h3>
-                ${recommendations.map(rec => `
-                    <div class="recommendation-card" style="border-left-color: ${rec.type === 'warning' ? '#f39c12' : rec.type === 'alert' ? '#e74c3c' : '#2ecc71'}">
-                        <p>${rec.message}</p>
-                    </div>
-                `).join('')}
-            `;
         }
+
+        // Update trends
+        function updateTrends() {
+            initializeTrendsChart();
+        }
+
+        // Load saved data when the application starts
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFromLocalStorage();
+            initialize();
+        });
     </script>
 </body>
 </html>
